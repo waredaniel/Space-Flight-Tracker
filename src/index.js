@@ -2,40 +2,42 @@ import $ from 'jquery';
 import 'bootstrap';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import './css/styles.css';
+import SpaceflightTrack from './services/Spaceflight-Tracker';
+import News from './services/CurrentsNews.js';
+
+function getSpaceflight(response) {
+  if (response) {
+    for (let i = 0; i < response.results.length; i++) {
+      $('.brifeNote').append(`<p>${response.results[i].window_start.replace("T"," ").replace("Z", "")}.</p> <p>${response.results[i].name.slice(0, (response.results[i].name.indexOf("|")-1))} was launched at ${response.results[i].location} and supported by ${response.results[i].lsp_name}. ${response.results[i].status.description}</p> <img src="${response.results[i].image}" width="100px">`)
+    }
+  }
+}
+
+async function makeApiCall (spaceflight) {
+  const response = await SpaceflightTrack.getSpaceflight(spaceflight);
+  getSpaceflight(response);
+  const news = await News.getNews(`${response.results[0].lsp_name}`);
+  displayNews(news);
+}
+
+let displayNews = (response) => {
+  const newsTitle = response.news[0].title;
+  const newsURL = `<a href=${response.news[0].url}> Click here to learn more.</a>`;
+  const newsAuthor = response.news[0].author;
+  $('.newsTitle').html(newsTitle);
+  $('.newsAuthor').html(newsAuthor);
+  $('.newsURL').append(newsURL);
+}
+
+// async function makeApiCallNews (response) {
+//   const news = await News.getNews(response);
+//   displayNews(news);
+// }
 
 $(document).ready(function() {
-  $('#weatherLocation').click(function() {
-    const city = $('#location').val();
-    const zipcode = $('#zipcode').val();
-    $('#location').val("");
-    $('#zipcode').val("");
-
-    let request = new XMLHttpRequest();
-    const url = `http://api.openweathermap.org/data/2.5/weather?q=${city}&appid=${process.env.API_KEY}`;
-    const urlZipcode = `https://api.openweathermap.org/data/2.5/weather?q=${zipcode}&appid=${process.env.API_KEY}`
-
-    request.onreadystatechange = function() {
-      if (this.readyState === 4 && this.status === 200) {
-        const response = JSON.parse(this.responseText);
-        /* eslint-disable*/
-        getElements(response);
-        /* eslint-enable*/
-      }
-    };
-
-    request.open("GET", url, true);
-    request.open("GET",urlZipcode, true);
-    request.send();
-  
-    /* eslint-disable*/
-    function getElements(response) {
-      $('.showHumidity').text(`The humidity in ${city} is ${response.main.humidity}%`);
-      $('.showTemp').text(`The temperature in Kelvins is ${response.main.temp} degrees.`);
-      let fahrenheitTemp= ((`${response.main.temp}` -273.15)*(9/5))+32
-      $('.showFahrenheit').text(`The temperature in Fahrenheit is ${fahrenheitTemp}`)
-      $('.showLon').text(`The longitude is ${response.coord.lon}`);
-      $('.showLat').text(`The latitude is ${response.coord.lat}`);
-    };
-    /* eslint-enable*/
-  });
+  $("#submit").click(()=> {
+  let spaceflight = $("#search").val();
+  makeApiCall(spaceflight);
+  // return makeApiCallNews(spaceflight);
+  })
 });
